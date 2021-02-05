@@ -35,12 +35,9 @@ RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.11.0+-
 
 RUN git clone https://github.com/marcelauliano/MitoHiFi.git && \
     cd MitoHiFi && \
-    cd exampleFiles && \
-    ln -s ../scripts && \
-    ln -s ../run_MitoHiFi.sh && \
     chmod +x run_MitoHiFi.sh
 
-WORKDIR /usr/src/MitoHiFi/exampleFiles
+WORKDIR /usr/src/MitoHiFi
 
 ENV PATH=/usr/src/ncbi-blast-2.11.0+/bin:$PATH
 
