@@ -43,5 +43,3 @@ RUN git clone https://github.com/marcelauliano/MitoHiFi.git && \
 WORKDIR /usr/src/MitoHiFi/exampleFiles
 
 ENV PATH=/usr/src/ncbi-blast-2.11.0+/bin:$PATH
-
-COPY /input /input
