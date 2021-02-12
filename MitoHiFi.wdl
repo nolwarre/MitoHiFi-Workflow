@@ -17,7 +17,7 @@ task mito {
     File contigsFasta
     File chrMRefFasta
     File chrMRefGenbank
-    Int sampleID
+    String sampleID
     Int organismCode
     String dockerImage
     Int RAM = 2

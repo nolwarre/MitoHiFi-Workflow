@@ -25,6 +25,7 @@ WORKDIR /opt
 RUN wget https://github.com/RemiAllio/MitoFinder/archive/master.zip && \
     unzip master.zip && \
     mv MitoFinder-master MitoFinder && \
+    rm master.zip && \
     cd MitoFinder && \
     ./install.sh
 ENV PATH=/opt/MitoFinder:$PATH
@@ -32,7 +33,8 @@ ENV PATH=/opt/MitoFinder:$PATH
 # install blast+
 WORKDIR /opt
 RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/ncbi-blast-2.11.0+-x64-linux.tar.gz && \
-    tar -zxvf ncbi-blast-2.11.0+-x64-linux.tar.gz
+    tar -zxvf ncbi-blast-2.11.0+-x64-linux.tar.gz && \
+    rm ncbi-blast-2.11.0+-x64-linux.tar.gz
 ENV PATH=/opt/ncbi-blast-2.11.0+/bin:$PATH
 
 # install MitoHiFi
