@@ -14,42 +14,51 @@ workflow mitoHiFiWorkflow {
 #define the 'mito' task
 task mito {
   input {
-    File reads
-    File ref_fasta
-    File ref_genbank
-    Int organism_code
-    String docker_image
+    File contigsFasta
+    File chrMRefFasta
+    File chrMRefGenbank
+    Int sampleID
+    Int organismCode
+    String dockerImage
     Int RAM = 2
     Int threadCount = 1
   }
 
   #define command to execute when this task runs
   command <<<
+    # go to work directory
     cd /usr/src/MitoHiFi/exampleFiles/
-    
+
+    # run main MitoHiFi using parameters
     /usr/src/MitoHiFi/exampleFiles/run_MitoHiFi.sh \
-    -c ~{reads} \
-    -f ~{ref_fasta} \
-    -g ~{ref_genbank} \
-    -t ~{threadCount} \
-    -o ~{organism_code}
+      -c ~{contigsFasta} \
+      -f ~{chrMRefFasta} \
+      -g ~{chrMRefGenbank} \
+      -t ~{threadCount} \
+      -o ~{organismCode}
 
-    second_coord=$(grep -B 2 "tRNA-Phe" ~{ref_genbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
-    grep "tRNA-Phe" /usr/src/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff | head -n 1 > first
-    first_coord=$(awk '{print $4}' $first)
-    num_rotation = $first_coord + $second_coord
+    # var for assembled mitogenome from MitoHiFi
+    assembledMitoGFF=/usr/src/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff
+    assembledMitoFasta=/usr/src/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta
 
+    # finds the number of bases to rotate the mitogenome to correctly align
+    grep "tRNA-Phe" $assembledMitoGFF | head -n 1 > first
+    firstCoord=$(awk '{print $4}' $first)
+    secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
+    numRotation=$first_coord + $second_coord
+
+    # rotate mitogenome by number of bases and location of tRNA-Phe
     python /usr/src/MitoHiFi/exampleFiles/scripts/rotate.py \
-    -i /usr/src/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta \
-    -r $num_rotation > mitogenome.rotated.fa
+    -i $assembledMitoFasta \
+    -r $num_rotation > ~{sampleID}.chrM.fa
   >>>
   #specify the output(s) of this task so cromwell will keep track of them
   output {
-    File outFile = "mitogenome.rotated.fa"
+    File outFile = sampleID + ".chrM.fa"
   }
   Int runtimeThreadcount = threadCount + 2
   runtime {
-    docker: docker_image
+    docker: dockerImage
     memory: RAM + "GB"
     cpus: runtimeThreadcount
   }
