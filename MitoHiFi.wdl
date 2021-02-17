@@ -27,12 +27,13 @@ task mito {
   #define command to execute when this task runs
   String mitoOut = basename(contigsFasta,".fa") + ".chrM.fa"
   command <<<
+    # save entry path
     p=$(pwd)
     # go to work directory
-    cd /opt/MitoHiFi/exampleFiles/
+    cd /opt/MitoHiFi/
 
     # run main MitoHiFi using parameters
-    /opt/MitoHiFi/exampleFiles/run_MitoHiFi.sh \
+    ./run_MitoHiFi.sh \
       -c ~{contigsFasta} \
       -f ~{chrMRefFasta} \
       -g ~{chrMRefGenbank} \
@@ -40,8 +41,8 @@ task mito {
       -o ~{organismCode}
 
     # var for assembled mitogenome from MitoHiFi
-    assembledMitoGFF=/opt/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff
-    assembledMitoFasta=/opt/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta
+    assembledMitoGFF=./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff
+    assembledMitoFasta=./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta
 
     # finds the number of bases to rotate the mitogenome to correctly align
     grep "tRNA-Phe" $assembledMitoGFF | head -n 1 > first
@@ -61,13 +62,9 @@ task mito {
     set -o xtrace
 
     # rotate mitogenome by number of bases and location of tRNA-Phe
-    python /opt/MitoHiFi/exampleFiles/scripts/rotate.py \
+    python ./scripts/rotate.py \
     -i $assembledMitoFasta \
-    -r $numRotation > /data/~{sampleID}.chrM.fa
-
-    # return to original dir and copy completed mitogenome
-    cd $p
-    cat /data/~{sampleID}.chrM.fa > ~{sampleID}.chrM.fa
+    -r $numRotation > /$p/~{sampleID}.chrM.fa
   >>>
   #specify the output(s) of this task so cromwell will keep track of them
   output {
