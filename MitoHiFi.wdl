@@ -8,7 +8,7 @@ version 1.0
 #add and name a workflow block
 workflow mitoHiFiWorkflow {
    call mito
-   output { File assembly = mito.outFile}
+   output { File mitogenome = mito.outFile}
 }
 
 #define the 'mito' task
@@ -17,7 +17,6 @@ task mito {
     File contigsFasta
     File chrMRefFasta
     File chrMRefGenbank
-    String sampleID
     Int organismCode
     String dockerImage
     Int RAM = 2
@@ -41,8 +40,8 @@ task mito {
       -o ~{organismCode}
 
     # var for assembled mitogenome from MitoHiFi
-    assembledMitoGFF=./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff
-    assembledMitoFasta=./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta
+    assembledMitoGFF=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff)
+    assembledMitoFasta=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta)
 
     # finds the number of bases to rotate the mitogenome to correctly align
     grep "tRNA-Phe" $assembledMitoGFF | head -n 1 > first
@@ -64,7 +63,7 @@ task mito {
     # rotate mitogenome by number of bases and location of tRNA-Phe
     python ./scripts/rotate.py \
     -i $assembledMitoFasta \
-    -r $numRotation > /$p/~{sampleID}.chrM.fa
+    -r $numRotation > /$p/~{mitoOut}
   >>>
   #specify the output(s) of this task so cromwell will keep track of them
   output {
