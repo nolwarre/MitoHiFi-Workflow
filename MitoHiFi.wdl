@@ -25,7 +25,9 @@ task mito {
   }
 
   #define command to execute when this task runs
+  String mitoOut = basename(contigsFasta,".fa") + ".chrM.fa"
   command <<<
+    p=$(pwd)
     # go to work directory
     cd /opt/MitoHiFi/exampleFiles/
 
@@ -47,14 +49,29 @@ task mito {
     secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
     numRotation=$(expr $firstCoord + $secondCoord)
 
+    # Set the exit code of a pipeline to that of the rightmost command
+    # to exit with a non-zero status, or zero if all commands of the pipeline exit
+    set -o pipefail
+    # cause a bash script to exit immediately when a command fails
+    set -e
+    # cause the bash shell to treat unset variables as an error and exit immediately
+    set -u
+    # echo each line of the script to stdout so we can see what is happening
+    # to turn off echo do 'set +o xtrace'
+    set -o xtrace
+
     # rotate mitogenome by number of bases and location of tRNA-Phe
     python /opt/MitoHiFi/exampleFiles/scripts/rotate.py \
     -i $assembledMitoFasta \
     -r $numRotation > /data/~{sampleID}.chrM.fa
+
+    # return to original dir and copy completed mitogenome
+    cd $p
+    cat /data/~{sampleID}.chrM.fa > ~{sampleID}.chrM.fa
   >>>
   #specify the output(s) of this task so cromwell will keep track of them
   output {
-    File outFile = "/data/~{sampleID}.chrM.fa"
+    File outFile = glob("*.chrM.fa")[0]
   }
   runtime {
     docker: dockerImage
