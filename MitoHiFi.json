@@ -1,0 +1,9 @@
+{
+  "mitoHiFiWorkflow.mito.contigsFasta": "/Users/nolwarre/MitoHiFi/input/HG01361.mat.fa",
+  "mitoHiFiWorkflow.mito.chrMRefFasta":"/Users/nolwarre/MitoHiFi/input/sequence.fasta",
+  "mitoHiFiWorkflow.mito.chrMRefGenbank":"/Users/nolwarre/MitoHiFi/input/sequence.gb",
+  "mitoHiFiWorkflow.mito.organismCode":"2",
+  "mitoHiFiWorkflow.mito.dockerImage": "docker.io/nolwarre/mito:optimize",
+  "mitoHiFiWorkflow.mito.RAM": "6",
+  "mitoHiFiWorkflow.mito.threadCount": "2"
+}

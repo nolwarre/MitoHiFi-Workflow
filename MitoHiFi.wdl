@@ -26,29 +26,6 @@ task mito {
   #define command to execute when this task runs
   String mitoOut = basename(contigsFasta,".fa") + ".chrM.fa"
   command <<<
-    # save entry path
-    p=$(pwd)
-    # go to work directory
-    cd /opt/MitoHiFi/
-
-    # run main MitoHiFi using parameters
-    ./run_MitoHiFi.sh \
-      -c ~{contigsFasta} \
-      -f ~{chrMRefFasta} \
-      -g ~{chrMRefGenbank} \
-      -t ~{threadCount} \
-      -o ~{organismCode}
-
-    # var for assembled mitogenome from MitoHiFi
-    assembledMitoGFF=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff)
-    assembledMitoFasta=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta)
-
-    # finds the number of bases to rotate the mitogenome to correctly align
-    grep "tRNA-Phe" $assembledMitoGFF | head -n 1 > first
-    firstCoord=$(awk '{print $4}' $first)
-    secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
-    numRotation=$(expr $firstCoord + $secondCoord)
-
     # Set the exit code of a pipeline to that of the rightmost command
     # to exit with a non-zero status, or zero if all commands of the pipeline exit
     set -o pipefail
@@ -60,10 +37,34 @@ task mito {
     # to turn off echo do 'set +o xtrace'
     set -o xtrace
 
+    # create a link to the folder in order to run in entry directory
+    ln -s /opt/MitoHiFi/scripts
+    ln -s /opt/MitoHiFi/run_MitoHiFi.sh
+
+    # localize fasta input to working directory
+    mv ~{contigsFasta} localContigs
+
+    # run main MitoHiFi using parameters
+    ./run_MitoHiFi.sh \
+      -c ./localContigs \
+      -f ~{chrMRefFasta} \
+      -g ~{chrMRefGenbank} \
+      -t ~{threadCount} \
+      -o ~{organismCode}
+
+    # var for assembled mitogenome from MitoHiFi
+    assembledMitoGFF=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff)
+    assembledMitoFasta=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta)
+
+    # finds the number of bases to rotate the mitogenome to correctly align
+    firstCoord=$(grep "tRNA-Phe" $assembledMitoGFF | head -n 1 | awk '{print $4}')
+    secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
+    numRotation=$(expr $firstCoord + $secondCoord)
+
     # rotate mitogenome by number of bases and location of tRNA-Phe
     python ./scripts/rotate.py \
-    -i $assembledMitoFasta \
-    -r $numRotation > /$p/~{mitoOut}
+      -i $assembledMitoFasta \
+      -r $numRotation > ~{mitoOut}
   >>>
   #specify the output(s) of this task so cromwell will keep track of them
   output {
