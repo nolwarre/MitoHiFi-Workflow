@@ -37,8 +37,15 @@ task mito {
     # name for sample
     PREFIX=$(basename ~{contigsFasta} | sed 's/.gz$//' | sed 's/.fa\(sta\)*$//' | sed 's/.[pm]at$//')
 
-    # localize fasta input to working directory
-    mv ~{contigsFasta} localContigs
+    # localize fasta input and/or uncompress to working directory
+    FILENAME=$(basename -- "~{contigsFasta}")
+    if [[ $FILENAME =~ \.gz$ ]]; then
+        cp ~{contigsFasta} .
+        gzip -d $FILENAME
+        mv ${FILENAME%\.gz} localContigs
+    else
+        mv ~{contigsFasta} localContigs
+    fi
 
     # Re-assemble mito contig from raw assembly input
     ./run_MitoHiFi.sh \
