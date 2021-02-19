@@ -5,7 +5,6 @@
 #set wdl version
 version 1.0
 
-#add and name a workflow block
 workflow mitoHiFiWorkflow {
    call mito
    output { File mitogenome = mito.outFile}
@@ -18,33 +17,30 @@ task mito {
     File chrMRefFasta
     File chrMRefGenbank
     Int organismCode
-    String dockerImage
+    # runtime config
+    String dockerImage = "docker.io/nolwarre/mito:optimize"
     Int RAM = 2
     Int threadCount = 1
+    Int preemptipleCount = 1
   }
 
   #define command to execute when this task runs
-  String mitoOut = basename(contigsFasta,".fa") + ".chrM.fa"
   command <<<
     # Set the exit code of a pipeline to that of the rightmost command
     # to exit with a non-zero status, or zero if all commands of the pipeline exit
-    set -o pipefail
-    # cause a bash script to exit immediately when a command fails
-    set -e
-    # cause the bash shell to treat unset variables as an error and exit immediately
-    set -u
-    # echo each line of the script to stdout so we can see what is happening
-    # to turn off echo do 'set +o xtrace'
-    set -o xtrace
+    set -eux -o pipefail
 
     # create a link to the folder in order to run in entry directory
     ln -s /opt/MitoHiFi/scripts
     ln -s /opt/MitoHiFi/run_MitoHiFi.sh
 
+    # name for sample
+    PREFIX=$(basename ~{contigsFasta} | sed 's/.gz$//' | sed 's/.fa\(sta\)*$//' | sed 's/.[pm]at$//')
+
     # localize fasta input to working directory
     mv ~{contigsFasta} localContigs
 
-    # run main MitoHiFi using parameters
+    # Re-assemble mito contig from raw assembly input
     ./run_MitoHiFi.sh \
       -c ./localContigs \
       -f ~{chrMRefFasta} \
@@ -57,16 +53,18 @@ task mito {
     assembledMitoFasta=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta)
 
     # finds the number of bases to rotate the mitogenome to correctly align
+    # find initial coordinate of tRNA-Phe from the assembled mito contig
     firstCoord=$(grep "tRNA-Phe" $assembledMitoGFF | head -n 1 | awk '{print $4}')
+    # find end coordinate of tRNA-Phe from the reference mitogenome
     secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
+    # add the intital coordinate and end coordinate of tRNA-phe for combined distance
     numRotation=$(expr $firstCoord + $secondCoord)
 
     # rotate mitogenome by number of bases and location of tRNA-Phe
     python ./scripts/rotate.py \
       -i $assembledMitoFasta \
-      -r $numRotation > ~{mitoOut}
+      -r $numRotation > $PREFIX.chrM.fa
   >>>
-  #specify the output(s) of this task so cromwell will keep track of them
   output {
     File outFile = glob("*.chrM.fa")[0]
   }
@@ -74,5 +72,6 @@ task mito {
     docker: dockerImage
     memory: RAM + "GB"
     cpus: threadCount
+    preemptible: preemptipleCount
   }
 }
