@@ -70,6 +70,7 @@ task mito {
     # rotate mitogenome by number of bases and location of tRNA-Phe
     python ./scripts/rotate.py \
       -i $assembledMitoFasta \
+      --force
       -r $numRotation > $PREFIX.chrM.fa
   >>>
   output {
