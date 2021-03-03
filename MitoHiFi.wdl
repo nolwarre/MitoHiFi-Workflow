@@ -5,10 +5,9 @@
 #set wdl version
 version 1.0
 
-#add and name a workflow block
 workflow mitoHiFiWorkflow {
    call mito
-   output { File assembly = mito.outFile}
+   output { File mitogenome = mito.outFile}
 }
 
 #define the 'mito' task
@@ -17,59 +16,63 @@ task mito {
     File contigsFasta
     File chrMRefFasta
     File chrMRefGenbank
-    String sampleID
     Int organismCode
-    String dockerImage
+    # runtime config
+    String dockerImage = "docker.io/nolwarre/mito:optimize"
     Int RAM = 2
     Int threadCount = 1
+    Int preemptipleCount = 1
   }
 
   #define command to execute when this task runs
-  String mitoOut = basename(contigsFasta,".fa") + ".chrM.fa"
   command <<<
-    p=$(pwd)
-    # go to work directory
-    cd /opt/MitoHiFi/exampleFiles/
+    # Set the exit code of a pipeline to that of the rightmost command
+    # to exit with a non-zero status, or zero if all commands of the pipeline exit
+    set -eux -o pipefail
 
-    # run main MitoHiFi using parameters
-    /opt/MitoHiFi/exampleFiles/run_MitoHiFi.sh \
-      -c ~{contigsFasta} \
+    # create a link to the folder in order to run in entry directory
+    ln -s /opt/MitoHiFi/scripts
+    ln -s /opt/MitoHiFi/run_MitoHiFi.sh
+
+    # name for sample
+    PREFIX=$(basename ~{contigsFasta} | sed 's/.gz$//' | sed 's/.fa\(sta\)*$//' | sed 's/.[pm]at$//')
+
+    # localize fasta input and/or uncompress to working directory
+    FILENAME=$(basename -- "~{contigsFasta}")
+    if [[ $FILENAME =~ \.gz$ ]]; then
+        cp ~{contigsFasta} .
+        gzip -d $FILENAME
+        mv ${FILENAME%\.gz} localContigs
+    else
+        mv ~{contigsFasta} localContigs
+    fi
+
+    # Re-assemble mito contig from raw assembly input
+    ./run_MitoHiFi.sh \
+      -c ./localContigs \
       -f ~{chrMRefFasta} \
       -g ~{chrMRefGenbank} \
       -t ~{threadCount} \
       -o ~{organismCode}
 
     # var for assembled mitogenome from MitoHiFi
-    assembledMitoGFF=/opt/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff
-    assembledMitoFasta=/opt/MitoHiFi/exampleFiles/mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta
+    assembledMitoGFF=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.gff)
+    assembledMitoFasta=(./mitogenome.annotation/mitogenome.annotation_MitoFinder_mitfi_Final_Results/mitogenome.annotation_mtDNA_contig.fasta)
 
     # finds the number of bases to rotate the mitogenome to correctly align
-    grep "tRNA-Phe" $assembledMitoGFF | head -n 1 > first
-    firstCoord=$(awk '{print $4}' $first)
+    # find initial coordinate of tRNA-Phe from the assembled mito contig
+    firstCoord=$(grep "tRNA-Phe" $assembledMitoGFF | head -n 1 | awk '{print $4}')
+    # find end coordinate of tRNA-Phe from the reference mitogenome
     secondCoord=$(grep -B 2 "tRNA-Phe" ~{chrMRefGenbank} | head -n 1 | tr -s '.' | cut -d"." -f2)
+    # add the intital coordinate and end coordinate of tRNA-phe for combined distance
     numRotation=$(expr $firstCoord + $secondCoord)
 
-    # Set the exit code of a pipeline to that of the rightmost command
-    # to exit with a non-zero status, or zero if all commands of the pipeline exit
-    set -o pipefail
-    # cause a bash script to exit immediately when a command fails
-    set -e
-    # cause the bash shell to treat unset variables as an error and exit immediately
-    set -u
-    # echo each line of the script to stdout so we can see what is happening
-    # to turn off echo do 'set +o xtrace'
-    set -o xtrace
-
     # rotate mitogenome by number of bases and location of tRNA-Phe
-    python /opt/MitoHiFi/exampleFiles/scripts/rotate.py \
-    -i $assembledMitoFasta \
-    -r $numRotation > /data/~{sampleID}.chrM.fa
-
-    # return to original dir and copy completed mitogenome
-    cd $p
-    cat /data/~{sampleID}.chrM.fa > ~{sampleID}.chrM.fa
+    python ./scripts/rotate.py \
+      -i $assembledMitoFasta \
+      --force \
+      -r $numRotation > $PREFIX.chrM.fa
   >>>
-  #specify the output(s) of this task so cromwell will keep track of them
   output {
     File outFile = glob("*.chrM.fa")[0]
   }
@@ -77,5 +80,6 @@ task mito {
     docker: dockerImage
     memory: RAM + "GB"
     cpus: threadCount
+    preemptible: preemptipleCount
   }
 }
