@@ -85,10 +85,6 @@ task mito {
   meta {
        author: "Noah Warre"
        email: "nolwarre@ucsc.edu"
-       description: "Test Before[![MitoTest][mitotest-badge]][mitotest]Test After
-        Testing badges!
-        
-        [mitotest-badge]: https://github.com/nolwarre/MitoHiFi-Workflow/actions/workflows/blank.yml/badge.svg
-        [mitotest]: https://github.com/nolwarre/MitoHiFi-Workflow/actions?query=workflow%3ACI"
+       description: "Test Before[![MitoWDLDesc](https://github.com/nolwarre/MitoHiFi-Workflow/actions/workflows/blank.yml/badge.svg)](https://github.com/nolwarre/MitoHiFi-Workflow/actions?query=workflow%3ACI)Test After"
    }
 }
