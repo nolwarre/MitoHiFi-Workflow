@@ -18,7 +18,7 @@ task mito {
     File chrMRefGenbank
     Int organismCode
     # runtime config
-    String dockerImage = "docker.io/nolwarre/mito:optimize"
+    String dockerImage = "docker.io/nolwarre/mito"
     Int RAM = 2
     Int threadCount = 1
     Int preemptipleCount = 1
