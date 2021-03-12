@@ -35,6 +35,6 @@ jobs:
           java -jar cromwell-58.jar --version
           java -jar womtool-58.jar --version
     - name: Validate wdl with Womtool
-      run: java -jar womtool-58.jar validate MitoHiFi.wdl
+      run: java -jar womtool-58.jar validate wdl/MitoHiFi.wdl
     - name: Run wdl with Cromwell
-      run: java -jar cromwell-58.jar run MitoHiFi.wdl -i MitoHiFi.json
+      run: java -jar cromwell-58.jar run wdl/MitoHiFi.wdl -i wdl/MitoHiFi.json
